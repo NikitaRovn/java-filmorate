@@ -93,23 +93,37 @@ class ModelValidationTest {
         film.setDescription("Valid description");
         film.setReleaseDate(LocalDate.of(2000, 1, 1));
         film.setDuration(120);
+        film.setMpa(new AgeRating(3, "PG-13", "PG-13"));
 
         Set<ConstraintViolation<Film>> violations = validator.validate(film);
         assertFalse(violations.isEmpty());
-        assertEquals("Название не может быть пустым", violations.iterator().next().getMessage());
+
+        Optional<ConstraintViolation<Film>> nameError = violations.stream()
+                .filter(v -> v.getPropertyPath().toString().equals("name"))
+                .findFirst();
+
+        assertTrue(nameError.isPresent(), "Должна быть ошибка валидации для поля name");
+        assertEquals("Название не может быть пустым", nameError.get().getMessage());
     }
 
     @Test
     void film_DescriptionTooLong_ShouldFail() {
         Film film = new Film();
         film.setName("Valid name");
-        film.setDescription("a".repeat(201)); // 201 characters
+        film.setDescription("a".repeat(201));
         film.setReleaseDate(LocalDate.of(2000, 1, 1));
         film.setDuration(120);
+        film.setMpa(new AgeRating(3, "PG-13", "PG-13"));
 
         Set<ConstraintViolation<Film>> violations = validator.validate(film);
         assertFalse(violations.isEmpty());
-        assertEquals("Максимальная длина описания — 200 символов", violations.iterator().next().getMessage());
+
+        Optional<ConstraintViolation<Film>> descriptionError = violations.stream()
+                .filter(v -> v.getPropertyPath().toString().equals("description"))
+                .findFirst();
+
+        assertTrue(descriptionError.isPresent(), "Должна быть ошибка валидации для поля description");
+        assertEquals("Максимальная длина описания — 200 символов", descriptionError.get().getMessage());
     }
 
     @Test
@@ -119,10 +133,17 @@ class ModelValidationTest {
         film.setDescription("Valid description");
         film.setReleaseDate(LocalDate.now().plusDays(1));
         film.setDuration(120);
+        film.setMpa(new AgeRating(3, "PG-13", "PG-13"));
 
         Set<ConstraintViolation<Film>> violations = validator.validate(film);
         assertFalse(violations.isEmpty());
-        assertEquals("Дата релиза не может быть в будущем", violations.iterator().next().getMessage());
+
+        Optional<ConstraintViolation<Film>> releaseDateError = violations.stream()
+                .filter(v -> v.getPropertyPath().toString().equals("releaseDate"))
+                .findFirst();
+
+        assertTrue(releaseDateError.isPresent(), "Должна быть ошибка валидации для поля releaseDate");
+        assertEquals("Дата релиза не может быть в будущем", releaseDateError.get().getMessage());
     }
 
     @Test
@@ -132,10 +153,36 @@ class ModelValidationTest {
         film.setDescription("Valid description");
         film.setReleaseDate(LocalDate.of(2000, 1, 1));
         film.setDuration(-120);
+        film.setMpa(new AgeRating(3, "PG-13", "PG-13"));
 
         Set<ConstraintViolation<Film>> violations = validator.validate(film);
         assertFalse(violations.isEmpty());
-        assertEquals("Продолжительность должна быть положительным числом", violations.iterator().next().getMessage());
+
+        Optional<ConstraintViolation<Film>> durationError = violations.stream()
+                .filter(v -> v.getPropertyPath().toString().equals("duration"))
+                .findFirst();
+
+        assertTrue(durationError.isPresent(), "Должна быть ошибка валидации для поля duration");
+        assertEquals("Продолжительность должна быть положительным числом", durationError.get().getMessage());
+    }
+
+    @Test
+    void film_NullMpa_ShouldFail() {
+        Film film = new Film();
+        film.setName("Valid name");
+        film.setDescription("Valid description");
+        film.setReleaseDate(LocalDate.of(2000, 1, 1));
+        film.setDuration(120);
+
+        Set<ConstraintViolation<Film>> violations = validator.validate(film);
+        assertFalse(violations.isEmpty());
+
+        Optional<ConstraintViolation<Film>> mpaError = violations.stream()
+                .filter(v -> v.getPropertyPath().toString().equals("mpa"))
+                .findFirst();
+
+        assertTrue(mpaError.isPresent(), "Должна быть ошибка валидации для поля mpa");
+        assertEquals("Рейтинг MPA обязателен", mpaError.get().getMessage());
     }
 
     @Test
@@ -145,9 +192,10 @@ class ModelValidationTest {
         film.setDescription("Valid description");
         film.setReleaseDate(LocalDate.of(2000, 1, 1));
         film.setDuration(120);
+        film.setMpa(new AgeRating(3, "PG-13", "PG-13"));
 
         Set<ConstraintViolation<Film>> violations = validator.validate(film);
-        assertTrue(violations.isEmpty());
+        assertTrue(violations.isEmpty(), "Не должно быть ошибок валидации для корректных данных");
     }
 
     @Test
@@ -157,8 +205,22 @@ class ModelValidationTest {
         film.setDescription("");
         film.setReleaseDate(LocalDate.of(2000, 1, 1));
         film.setDuration(120);
+        film.setMpa(new AgeRating(3, "PG-13", "PG-13"));
 
         Set<ConstraintViolation<Film>> violations = validator.validate(film);
-        assertTrue(violations.isEmpty());
+        assertTrue(violations.isEmpty(), "Пустое описание должно быть допустимо");
+    }
+
+    @Test
+    void film_NullDescription_ShouldPass() {
+        Film film = new Film();
+        film.setName("Valid name");
+        film.setDescription(null);
+        film.setReleaseDate(LocalDate.of(2000, 1, 1));
+        film.setDuration(120);
+        film.setMpa(new AgeRating(3, "PG-13", "PG-13"));
+
+        Set<ConstraintViolation<Film>> violations = validator.validate(film);
+        assertTrue(violations.isEmpty(), "null описание должно быть допустимо");
     }
 }

@@ -3,6 +3,7 @@ package ru.yandex.practicum.filmorate.controller;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import ru.yandex.practicum.filmorate.model.FriendshipStatus;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.UserService;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
@@ -62,6 +63,16 @@ public class UserController {
         userService.addFriend(id, friendId);
     }
 
+    @PutMapping("/{id}/friends/confirm/{friendId}")
+    public void confirmFriend(@PathVariable Integer id, @PathVariable Integer friendId) {
+        userService.confirmFriend(id, friendId);
+    }
+
+    @DeleteMapping("/{id}/friends/reject/{friendId}")
+    public void rejectFriend(@PathVariable Integer id, @PathVariable Integer friendId) {
+        userService.rejectFriend(id, friendId);
+    }
+
     @DeleteMapping("/{id}/friends/{friendId}")
     public void removeFriend(@PathVariable Integer id, @PathVariable Integer friendId) {
         userService.removeFriend(id, friendId);
@@ -72,9 +83,24 @@ public class UserController {
         return userService.getFriends(id);
     }
 
+    @GetMapping("/{id}/friends/confirmed")
+    public List<User> getConfirmedFriends(@PathVariable Integer id) {
+        return userService.getConfirmedFriends(id);
+    }
+
+    @GetMapping("/{id}/friends/pending")
+    public List<User> getPendingFriendRequests(@PathVariable Integer id) {
+        return userService.getPendingFriendRequests(id);
+    }
+
     @GetMapping("/{id}/friends/common/{otherId}")
     public List<User> getCommonFriends(@PathVariable Integer id, @PathVariable Integer otherId) {
         return userService.getCommonFriends(id, otherId);
+    }
+
+    @GetMapping("/{id}/friends/status/{friendId}")
+    public FriendshipStatus getFriendshipStatus(@PathVariable Integer id, @PathVariable Integer friendId) {
+        return userService.getFriendshipStatus(id, friendId);
     }
 
     private void setUserNameFromLoginIfEmpty(User user) {

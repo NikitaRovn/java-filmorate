@@ -3,8 +3,9 @@ package ru.yandex.practicum.filmorate.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import ru.yandex.practicum.filmorate.model.Friendship;
+import ru.yandex.practicum.filmorate.model.FriendshipStatus;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.storage.friendship.FriendshipStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -13,45 +14,69 @@ import java.util.stream.Collectors;
 @Slf4j
 public class UserService {
     private final UserStorage userStorage;
-    private final Map<Integer, Friendship> friendships = new HashMap<>();
+    private final FriendshipStorage friendshipStorage;
 
     @Autowired
-    public UserService(UserStorage userStorage) {
+    public UserService(UserStorage userStorage, FriendshipStorage friendshipStorage) {
         this.userStorage = userStorage;
+        this.friendshipStorage = friendshipStorage;
     }
 
     public void addFriend(Integer userId, Integer friendId) {
         validateUserExists(userId);
         validateUserExists(friendId);
 
-        Friendship userFriendship = friendships.computeIfAbsent(userId, Friendship::new);
-        Friendship friendFriendship = friendships.computeIfAbsent(friendId, Friendship::new);
+        friendshipStorage.addFriend(userId, friendId, FriendshipStatus.PENDING);
+        log.info("Пользователь {} отправил запрос на дружбу пользователю {}", userId, friendId);
+    }
 
-        userFriendship.addFriend(friendId);
-        friendFriendship.addFriend(userId);
+    public void confirmFriend(Integer userId, Integer friendId) {
+        validateUserExists(userId);
+        validateUserExists(friendId);
 
-        log.info("Пользователи {} и {} теперь друзья", userId, friendId);
+        friendshipStorage.updateFriendshipStatus(friendId, userId, FriendshipStatus.CONFIRMED);
+        log.info("Пользователь {} подтвердил дружбу с пользователем {}", userId, friendId);
+    }
+
+    public void rejectFriend(Integer userId, Integer friendId) {
+        validateUserExists(userId);
+        validateUserExists(friendId);
+
+        friendshipStorage.removeFriend(friendId, userId);
+        log.info("Пользователь {} отклонил запрос на дружбу от пользователя {}", userId, friendId);
     }
 
     public void removeFriend(Integer userId, Integer friendId) {
         validateUserExists(userId);
         validateUserExists(friendId);
 
-        if (friendships.containsKey(userId)) {
-            friendships.get(userId).removeFriend(friendId);
-        }
-        if (friendships.containsKey(friendId)) {
-            friendships.get(friendId).removeFriend(userId);
-        }
-
-        log.info("Пользователи {} и {} больше не друзья", userId, friendId);
+        friendshipStorage.removeFriend(userId, friendId);
+        log.info("Пользователь {} удалил пользователя {} из друзей", userId, friendId);
     }
 
     public List<User> getFriends(Integer userId) {
         validateUserExists(userId);
 
-        return friendships.getOrDefault(userId, new Friendship(userId))
-                .getFriendIds().stream()
+        return friendshipStorage.getFriendIds(userId).stream()
+                .map(id -> userStorage.findById(id).orElse(null))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    public List<User> getConfirmedFriends(Integer userId) {
+        validateUserExists(userId);
+
+        return friendshipStorage.getFriends(userId).entrySet().stream()
+                .filter(entry -> entry.getValue() == FriendshipStatus.CONFIRMED)
+                .map(entry -> userStorage.findById(entry.getKey()).orElse(null))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    public List<User> getPendingFriendRequests(Integer userId) {
+        validateUserExists(userId);
+
+        return friendshipStorage.getIncomingFriendRequests(userId).stream()
                 .map(id -> userStorage.findById(id).orElse(null))
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
@@ -61,14 +86,21 @@ public class UserService {
         validateUserExists(userId);
         validateUserExists(otherUserId);
 
-        Set<Integer> userFriends = friendships.getOrDefault(userId, new Friendship(userId)).getFriendIds();
-        Set<Integer> otherUserFriends = friendships.getOrDefault(otherUserId, new Friendship(otherUserId)).getFriendIds();
+        Set<Integer> userFriends = friendshipStorage.getFriendIds(userId);
+        Set<Integer> otherUserFriends = friendshipStorage.getFriendIds(otherUserId);
 
         return userFriends.stream()
                 .filter(otherUserFriends::contains)
                 .map(id -> userStorage.findById(id).orElse(null))
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
+    }
+
+    public FriendshipStatus getFriendshipStatus(Integer userId, Integer friendId) {
+        validateUserExists(userId);
+        validateUserExists(friendId);
+
+        return friendshipStorage.getFriendshipStatus(userId, friendId);
     }
 
     private void validateUserExists(Integer userId) {
