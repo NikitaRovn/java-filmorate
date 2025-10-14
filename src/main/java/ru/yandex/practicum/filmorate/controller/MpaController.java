@@ -29,6 +29,6 @@ public class MpaController {
     public AgeRating getMpaById(@PathVariable Integer id) {
         log.info("Получен запрос на получение рейтинга MPA с ID: {}", id);
         return mpaService.getMpaById(id)
-                .orElseThrow(() -> new NoSuchElementException("Рейтинг MPA с reviewId " + id + " не найден"));
+                .orElseThrow(() -> new NoSuchElementException("Рейтинг MPA с id " + id + " не найден"));
     }
 }

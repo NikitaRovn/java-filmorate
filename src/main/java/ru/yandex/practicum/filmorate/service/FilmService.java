@@ -62,13 +62,13 @@ public class FilmService {
 
     private void validateFilmExists(Integer filmId) {
         if (!filmStorage.existsById(filmId)) {
-            throw new NoSuchElementException("Фильм с reviewId " + filmId + " не найден");
+            throw new NoSuchElementException("Фильм с id " + filmId + " не найден");
         }
     }
 
     private void validateUserExists(Integer userId) {
         if (!userStorage.existsById(userId)) {
-            throw new NoSuchElementException("Пользователь с reviewId " + userId + " не найден");
+            throw new NoSuchElementException("Пользователь с id " + userId + " не найден");
         }
     }
 }

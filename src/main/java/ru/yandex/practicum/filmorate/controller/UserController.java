@@ -35,7 +35,7 @@ public class UserController {
     public User findUserById(@PathVariable Integer id) {
         log.info("Получен запрос на получение пользователя с ID: {}", id);
         return userStorage.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("Пользователь с reviewId " + id + " не найден"));
+                .orElseThrow(() -> new NoSuchElementException("Пользователь с id " + id + " не найден"));
     }
 
     @PostMapping
@@ -50,7 +50,7 @@ public class UserController {
     public User update(@Valid @RequestBody User user) {
         if (!userStorage.existsById(user.getId())) {
             log.warn("Попытка обновления несуществующего пользователя с ID: {}", user.getId());
-            throw new NoSuchElementException("Пользователь с reviewId " + user.getId() + " не найден");
+            throw new NoSuchElementException("Пользователь с id " + user.getId() + " не найден");
         }
         setUserNameFromLoginIfEmpty(user);
         User updatedUser = userStorage.update(user);
