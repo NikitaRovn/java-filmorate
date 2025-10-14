@@ -35,7 +35,6 @@ public class ReviewService {
     public List<Review> getAllReviews(Integer count) {
         return reviewStorage.findAllReviews(count);
     }
-    private final EventService eventService;
 
     public List<Review> getReviewsByFilmId(Long filmId, Integer count) {
         return reviewStorage.findReviewsByFilmId(filmId, count);
