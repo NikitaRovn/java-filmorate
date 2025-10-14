@@ -3,6 +3,7 @@ package ru.yandex.practicum.filmorate.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.like.LikeStorage;
@@ -70,5 +71,12 @@ public class FilmService {
         if (!userStorage.existsById(userId)) {
             throw new NoSuchElementException("Пользователь с id " + userId + " не найден");
         }
+    }
+
+    @Transactional
+    public void deleteFilm(Long id) {
+        Film film = filmStorage.findById(id.intValue()).orElse(null);
+        if (film == null) throw new NoSuchElementException("Фильм с id " + id + " не найден");
+        filmStorage.deleteFilmById(id);
     }
 }

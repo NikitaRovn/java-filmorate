@@ -18,6 +18,11 @@ public class UserDbStorage implements UserStorage {
 
     private final JdbcTemplate jdbcTemplate;
 
+    public static final String DELETE_USER_BY_ID_QUERY = """
+            DELETE FROM users
+            WHERE user_id = ?
+            """;
+
     @Autowired
     public UserDbStorage(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
@@ -65,6 +70,13 @@ public class UserDbStorage implements UserStorage {
         String sql = "SELECT * FROM users WHERE user_id = ?";
         List<User> users = jdbcTemplate.query(sql, this::mapRowToUser, id);
         return users.stream().findFirst();
+    }
+
+    @Override
+    public void deleteUserById(Long id) {
+        jdbcTemplate.update("DELETE FROM likes WHERE user_id = ?", id);
+        jdbcTemplate.update("DELETE FROM friendships WHERE user_id = ? OR friend_id = ?", id, id);
+        jdbcTemplate.update(DELETE_USER_BY_ID_QUERY, id);
     }
 
     @Override
