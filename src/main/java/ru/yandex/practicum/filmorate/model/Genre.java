@@ -32,7 +32,7 @@ public class Genre {
             case 4: return new Genre(4, "Триллер");
             case 5: return new Genre(5, "Документальный");
             case 6: return new Genre(6, "Боевик");
-            default: throw new IllegalArgumentException("Unknown genre id: " + id);
+            default: throw new IllegalArgumentException("Unknown genre reviewId: " + id);
         }
     }
 

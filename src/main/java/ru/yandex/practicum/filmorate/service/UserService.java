@@ -105,7 +105,7 @@ public class UserService {
 
     private void validateUserExists(Integer userId) {
         if (!userStorage.existsById(userId)) {
-            throw new NoSuchElementException("Пользователь с id " + userId + " не найден");
+            throw new NoSuchElementException("Пользователь с reviewId " + userId + " не найден");
         }
     }
 }

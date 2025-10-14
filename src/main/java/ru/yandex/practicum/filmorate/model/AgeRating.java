@@ -32,7 +32,7 @@ public class AgeRating {
             case 3: return new AgeRating(3, "PG-13", "PG-13");
             case 4: return new AgeRating(4, "R", "R");
             case 5: return new AgeRating(5, "NC-17", "NC-17");
-            default: throw new IllegalArgumentException("Unknown rating id: " + id);
+            default: throw new IllegalArgumentException("Unknown rating reviewId: " + id);
         }
     }
 }

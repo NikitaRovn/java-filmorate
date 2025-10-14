@@ -51,6 +51,24 @@ CREATE TABLE IF NOT EXISTS likes (
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
+CREATE TABLE IF NOT EXISTS reviews (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    content TEXT NOT NULL,
+    is_positive BOOLEAN NOT NULL,
+    user_id BIGINT NOT NULL,
+    film_id BIGINT NOT NULL,
+    useful INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS review_reactions (
+    review_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    is_like BOOLEAN NOT NULL,
+    PRIMARY KEY (review_id, user_id),
+    CONSTRAINT fk_review FOREIGN KEY (review_id) REFERENCES reviews(id) ON DELETE CASCADE,
+    CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
 CREATE INDEX IF NOT EXISTS idx_likes_film_id ON likes(film_id);
 CREATE INDEX IF NOT EXISTS idx_likes_user_id ON likes(user_id);
 CREATE INDEX IF NOT EXISTS idx_friendships_user_id ON friendships(user_id);

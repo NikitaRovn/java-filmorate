@@ -37,7 +37,7 @@ public class FilmController {
     public Film findFilmById(@PathVariable Integer id) {
         log.info("Получен запрос на получение фильма с ID: {}", id);
         return filmStorage.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("Фильм с id " + id + " не найден"));
+                .orElseThrow(() -> new NoSuchElementException("Фильм с reviewId " + id + " не найден"));
     }
 
     @PostMapping
@@ -52,7 +52,7 @@ public class FilmController {
     public Film update(@Valid @RequestBody Film film) {
         if (!filmStorage.existsById(film.getId())) {
             log.warn("Попытка обновления несуществующего фильма с ID: {}", film.getId());
-            throw new NoSuchElementException("Фильм с id " + film.getId() + " не найден");
+            throw new NoSuchElementException("Фильм с reviewId " + film.getId() + " не найден");
         }
         validateFilmReleaseDate(film);
         Film updatedFilm = filmStorage.update(film);
