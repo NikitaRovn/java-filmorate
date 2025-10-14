@@ -3,6 +3,7 @@ package ru.yandex.practicum.filmorate.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import ru.yandex.practicum.filmorate.model.Event;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.like.LikeStorage;
@@ -16,12 +17,15 @@ public class FilmService {
     private final FilmStorage filmStorage;
     private final UserStorage userStorage;
     private final LikeStorage likeStorage;
+    private final EventService eventService;
 
     @Autowired
-    public FilmService(FilmStorage filmStorage, UserStorage userStorage, LikeStorage likeStorage) {
+    public FilmService(FilmStorage filmStorage, UserStorage userStorage,
+                       LikeStorage likeStorage, EventService eventService) {
         this.filmStorage = filmStorage;
         this.userStorage = userStorage;
         this.likeStorage = likeStorage;
+        this.eventService = eventService;
     }
 
     public void addLike(Integer filmId, Integer userId) {
@@ -34,7 +38,9 @@ public class FilmService {
         }
 
         likeStorage.addLike(filmId, userId);
-        log.info("Пользователь {} поставил лайк фильму {}", userId, filmId);
+        eventService.addLikeEvent(userId, filmId, Event.Operation.ADD);
+        log.info("Создано событие LIKE: пользователь {} добавил лайк фильму {} (operation: ADD, entityId: {})",
+                userId, filmId, filmId);
     }
 
     public void removeLike(Integer filmId, Integer userId) {
@@ -42,7 +48,9 @@ public class FilmService {
         validateUserExists(userId);
 
         likeStorage.removeLike(filmId, userId);
-        log.info("Пользователь {} удалил лайк с фильма {}", userId, filmId);
+        eventService.addLikeEvent(userId, filmId, Event.Operation.REMOVE);
+        log.info("Создано событие LIKE: пользователь {} удалил лайк фильму {} (operation: REMOVE, entityId: {})",
+                userId, filmId, filmId);
     }
 
     public List<Film> getPopularFilms(int count) {

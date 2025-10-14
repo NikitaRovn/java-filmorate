@@ -1,3 +1,6 @@
+DELETE FROM events;
+DELETE FROM review_likes;
+DELETE FROM reviews;
 DELETE FROM likes;
 DELETE FROM film_genres;
 DELETE FROM friendships;
@@ -10,6 +13,8 @@ ALTER TABLE users ALTER COLUMN user_id RESTART WITH 1;
 ALTER TABLE films ALTER COLUMN film_id RESTART WITH 1;
 ALTER TABLE ratings ALTER COLUMN rating_id RESTART WITH 1;
 ALTER TABLE genres ALTER COLUMN genre_id RESTART WITH 1;
+ALTER TABLE reviews ALTER COLUMN review_id RESTART WITH 1;
+ALTER TABLE events ALTER COLUMN event_id RESTART WITH 1;
 
 INSERT INTO ratings (rating_id, code) VALUES
 (1, 'G'),
