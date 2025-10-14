@@ -9,6 +9,7 @@ import ru.yandex.practicum.filmorate.dto.ReviewRegisterDto;
 import ru.yandex.practicum.filmorate.dto.ReviewUpdateDto;
 import ru.yandex.practicum.filmorate.exception.review.ReviewNotFoundException;
 import ru.yandex.practicum.filmorate.mapper.ReviewMapper;
+import ru.yandex.practicum.filmorate.model.Event;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.model.review.Action;
@@ -31,6 +32,7 @@ public class ReviewService {
     private final FilmStorage filmStorage;
     private final ReviewStorage reviewStorage;
     private final ReviewReactionStorage reviewReactionStorage;
+    private final EventService eventService;
 
     public List<Review> getAllReviews(Integer count) {
         return reviewStorage.findAllReviews(count);
@@ -81,7 +83,10 @@ public class ReviewService {
                 .orElseThrow(() -> new NoSuchElementException("Фильм с ID " + filmId + " не найден"));
         review.setFilm(film);
 
-        return reviewStorage.saveReview(ReviewMapper.mapFromReviewToReviewEntity(review));
+        Review saved = reviewStorage.saveReview(ReviewMapper.mapFromReviewToReviewEntity(review));
+        eventService.addReviewEvent(saved.getUser().getId(), saved.getId().intValue(), Event.Operation.ADD);
+
+        return saved;
     }
 
     public Review updateReview(@Valid ReviewUpdateDto reviewUpdateDto) {
@@ -91,7 +96,11 @@ public class ReviewService {
         if (reviewUpdateDto.getContent() != null) review.setContent(reviewUpdateDto.getContent());
         if (reviewUpdateDto.getIsPositive() != null) review.setIsPositive(reviewUpdateDto.getIsPositive());
 
-        return reviewStorage.updateReview(ReviewMapper.mapFromReviewToReviewEntity(review));
+        Review updated = reviewStorage.updateReview(ReviewMapper.mapFromReviewToReviewEntity(review));
+
+        eventService.addReviewEvent(updated.getUser().getId(), updated.getId().intValue(), Event.Operation.UPDATE);
+
+        return updated;
     }
 
     @Transactional
@@ -113,6 +122,7 @@ public class ReviewService {
         Review review = reviewStorage.findReviewById(id);
         if (review == null) throw new ReviewNotFoundException(id);
         reviewStorage.deleteReviewById(id);
+        eventService.addReviewEvent(review.getUser().getId(), id.intValue(), Event.Operation.REMOVE);
     }
 
     private static int deltaCalculator(Action action, ReactionType reactionType, Boolean exist) {
