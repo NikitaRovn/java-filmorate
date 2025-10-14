@@ -88,6 +88,13 @@ public class FilmDbStorage implements FilmStorage {
     }
 
     @Override
+    public void deleteFilmById(Long id) {
+        jdbcTemplate.update("DELETE FROM likes WHERE film_id = ?", id);
+        jdbcTemplate.update("DELETE FROM film_genres WHERE film_id = ?", id);
+        jdbcTemplate.update("DELETE FROM films WHERE film_id = ?", id);
+    }
+
+    @Override
     public boolean existsById(Integer id) {
         String sql = "SELECT COUNT(*) FROM films WHERE film_id = ?";
         Integer count = jdbcTemplate.queryForObject(sql, Integer.class, id);
