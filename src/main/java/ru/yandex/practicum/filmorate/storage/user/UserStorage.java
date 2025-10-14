@@ -13,5 +13,7 @@ public interface UserStorage {
 
     Optional<User> findById(Integer id);
 
+    void deleteUserById(Long id);
+
     boolean existsById(Integer id);
 }

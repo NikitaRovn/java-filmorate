@@ -12,4 +12,6 @@ public interface LikeStorage {
     int getLikesCount(Integer filmId);
 
     Set<Integer> getLikedUserIds(Integer filmId);
+
+    Set<Integer> getLikedFilmIds(Integer userId);
 }

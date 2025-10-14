@@ -1,110 +1,131 @@
 package ru.yandex.practicum.filmorate.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import ru.yandex.practicum.filmorate.model.Event;
-import ru.yandex.practicum.filmorate.model.Review;
+import org.springframework.transaction.annotation.Transactional;
+import ru.yandex.practicum.filmorate.dto.ReviewRegisterDto;
+import ru.yandex.practicum.filmorate.dto.ReviewUpdateDto;
+import ru.yandex.practicum.filmorate.exception.review.ReviewNotFoundException;
+import ru.yandex.practicum.filmorate.mapper.ReviewMapper;
+import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.model.review.Action;
+import ru.yandex.practicum.filmorate.model.review.ReactionType;
+import ru.yandex.practicum.filmorate.model.review.Review;
+import ru.yandex.practicum.filmorate.model.review.ReviewReaction;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
+import ru.yandex.practicum.filmorate.storage.review.ReviewReactionStorage;
 import ru.yandex.practicum.filmorate.storage.review.ReviewStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
+
 import java.util.List;
 import java.util.NoSuchElementException;
 
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class ReviewService {
-
-    private final ReviewStorage reviewStorage;
     private final UserStorage userStorage;
     private final FilmStorage filmStorage;
+    private final ReviewStorage reviewStorage;
+    private final ReviewReactionStorage reviewReactionStorage;
+
+    public List<Review> getAllReviews(Integer count) {
+        return reviewStorage.findAllReviews(count);
+    }
     private final EventService eventService;
 
-    @Autowired
-    public ReviewService(ReviewStorage reviewStorage, UserStorage userStorage,
-                         FilmStorage filmStorage, EventService eventService) {
-        this.reviewStorage = reviewStorage;
-        this.userStorage = userStorage;
-        this.filmStorage = filmStorage;
-        this.eventService = eventService;
+    public List<Review> getReviewsByFilmId(Long filmId, Integer count) {
+        return reviewStorage.findReviewsByFilmId(filmId, count);
     }
 
-    public Review create(Review review) {
-        validateUserExists(review.getUserId());
-        validateFilmExists(review.getFilmId());
+    public Review getReview(Long id) {
+        Review review = reviewStorage.findReviewById(id);
+        if (review == null) throw new ReviewNotFoundException(id);
 
-        Review createdReview = reviewStorage.create(review);
-        eventService.addReviewEvent(review.getUserId(), createdReview.getReviewId(), Event.Operation.ADD);
-        return createdReview;
+        // Формирование пользователя
+        Integer userId = review.getUser().getId();
+        User user = userStorage.findById(userId)
+                .orElseThrow(() -> new NoSuchElementException("Пользователь с ID " + userId + " не найден"));
+        review.setUser(user);
+
+        // Формирование фильма
+        Integer filmId = review.getFilm().getId();
+        Film film = filmStorage.findById(filmId)
+                .orElseThrow(() -> new NoSuchElementException("Фильм с ID " + filmId + " не найден"));
+        review.setFilm(film);
+
+        // Формирование полезности
+        List<ReviewReaction> reviewReactions = reviewReactionStorage.getReviewReactionsByReviewId(review.getId());
+        Integer useful = reviewReactions.stream()
+                .mapToInt(r -> Boolean.TRUE.equals(r.getIsLike()) ? 1 : -1)
+                .sum();
+        review.setUseful(useful);
+
+        return review;
     }
 
-    public Review update(Review review) {
-        validateReviewExists(review.getReviewId());
-        validateUserExists(review.getUserId());
-        validateFilmExists(review.getFilmId());
+    @Transactional
+    public Review addReview(ReviewRegisterDto reviewRegisterDto) {
+        Review review = ReviewMapper.mapFromReviewRegisterDtoToReview(reviewRegisterDto);
+        review.setUseful(0);
 
-        Review updatedReview = reviewStorage.update(review);
-        eventService.addReviewEvent(review.getUserId(), updatedReview.getReviewId(), Event.Operation.UPDATE);
-        return updatedReview;
+        Integer userId = reviewRegisterDto.getUserId().intValue();
+        User user = userStorage.findById(userId)
+                .orElseThrow(() -> new NoSuchElementException("Пользователь с ID " + userId + " не найден"));
+        review.setUser(user);
+
+        Integer filmId = reviewRegisterDto.getFilmId().intValue();
+        Film film = filmStorage.findById(filmId)
+                .orElseThrow(() -> new NoSuchElementException("Фильм с ID " + filmId + " не найден"));
+        review.setFilm(film);
+
+        return reviewStorage.saveReview(ReviewMapper.mapFromReviewToReviewEntity(review));
     }
 
-    public void delete(Integer reviewId) {
-        Review review = getById(reviewId);
-        reviewStorage.delete(reviewId);
-        eventService.addReviewEvent(review.getUserId(), reviewId, Event.Operation.REMOVE);
+    public Review updateReview(@Valid ReviewUpdateDto reviewUpdateDto) {
+        Review review = reviewStorage.findReviewById(reviewUpdateDto.getReviewId());
+        if (review == null) throw new ReviewNotFoundException(reviewUpdateDto.getReviewId());
+
+        if (reviewUpdateDto.getContent() != null) review.setContent(reviewUpdateDto.getContent());
+        if (reviewUpdateDto.getIsPositive() != null) review.setIsPositive(reviewUpdateDto.getIsPositive());
+
+        return reviewStorage.updateReview(ReviewMapper.mapFromReviewToReviewEntity(review));
     }
 
-    public Review getById(Integer reviewId) {
-        return reviewStorage.findById(reviewId)
-                .orElseThrow(() -> new NoSuchElementException("Отзыв с id " + reviewId + " не найден"));
-    }
+    @Transactional
+    public void reactionManager(Long reviewId, Long userId, Action action, ReactionType reactionType) {
+        ReviewReaction reviewReaction = reviewReactionStorage.getReviewReaction(reviewId, userId);
+        Boolean exist = (reviewReaction == null) ? null : reviewReaction.getIsLike();
+        int delta = deltaCalculator(action, reactionType, exist);
 
-    public List<Review> getReviewsByFilmId(Integer filmId, Integer count) {
-        if (filmId != null) {
-            validateFilmExists(filmId);
-            return reviewStorage.findByFilmId(filmId, count == null ? 10 : count);
+        if (action == Action.ADD) {
+            reviewReactionStorage.saveReviewReaction(reviewId, userId, reactionType.equals(ReactionType.LIKE));
         } else {
-            return reviewStorage.findAll(count == null ? 10 : count);
+            reviewReactionStorage.deleteReviewReaction(reviewId, userId);
         }
+
+        if (delta != 0) reviewStorage.updateReviewUseful(reviewId, delta);
     }
 
-    public void addLike(Integer reviewId, Integer userId) {
-        validateReviewExists(reviewId);
-        validateUserExists(userId);
-        reviewStorage.addLike(reviewId, userId);
+    public void deleteReview(Long id) {
+        Review review = reviewStorage.findReviewById(id);
+        if (review == null) throw new ReviewNotFoundException(id);
+        reviewStorage.deleteReviewById(id);
     }
 
-    public void addDislike(Integer reviewId, Integer userId) {
-        validateReviewExists(reviewId);
-        validateUserExists(userId);
-        reviewStorage.addDislike(reviewId, userId);
-    }
-
-    public void removeLike(Integer reviewId, Integer userId) {
-        validateReviewExists(reviewId);
-        validateUserExists(userId);
-        reviewStorage.removeLike(reviewId, userId);
-    }
-
-    public void removeDislike(Integer reviewId, Integer userId) {
-        validateReviewExists(reviewId);
-        validateUserExists(userId);
-        reviewStorage.removeDislike(reviewId, userId);
-    }
-
-    private void validateReviewExists(Integer reviewId) {
-        if (!reviewStorage.existsById(reviewId)) {
-            throw new NoSuchElementException("Отзыв с id " + reviewId + " не найден");
+    private static int deltaCalculator(Action action, ReactionType reactionType, Boolean exist) {
+        if (action == Action.ADD) {
+            if (exist == null) return (reactionType.equals(ReactionType.LIKE)) ? +1 : -1;
+            if (Boolean.TRUE.equals(exist)  && reactionType.equals(ReactionType.DISLIKE)) return -2; // like -> dislike
+            if (Boolean.FALSE.equals(exist) && reactionType.equals(ReactionType.LIKE))    return +2; // dislike -> like
+        } else {
+            if (exist == null) return 0;
+            if (Boolean.TRUE.equals(exist)  && reactionType.equals(ReactionType.LIKE))    return -1;
+            if (Boolean.FALSE.equals(exist) && reactionType.equals(ReactionType.DISLIKE)) return +1;
         }
-    }
-
-    private void validateUserExists(Integer userId) {
-        if (!userStorage.existsById(userId)) {
-            throw new NoSuchElementException("Пользователь с id " + userId + " не найден");
-        }
-    }
-
-    private void validateFilmExists(Integer filmId) {
-        if (!filmStorage.existsById(filmId)) {
-            throw new NoSuchElementException("Фильм с id " + filmId + " не найден");
-        }
+        return 0;
     }
 }

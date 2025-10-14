@@ -120,4 +120,12 @@ public class UserService {
             throw new NoSuchElementException("Пользователь с id " + userId + " не найден");
         }
     }
+
+    public void deleteUser(Long id) {
+        User user = userStorage.findById(id.intValue()).orElse(null);
+        if (user == null) {
+            throw new NoSuchElementException("Пользователь с id " + id + " не найден");
+        }
+        userStorage.deleteUserById(id);
+    }
 }
