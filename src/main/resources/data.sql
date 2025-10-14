@@ -5,6 +5,8 @@ DELETE FROM films;
 DELETE FROM users;
 DELETE FROM genres;
 DELETE FROM ratings;
+DELETE FROM reviews;
+DELETE FROM review_reactions;
 
 ALTER TABLE users ALTER COLUMN user_id RESTART WITH 1;
 ALTER TABLE films ALTER COLUMN film_id RESTART WITH 1;

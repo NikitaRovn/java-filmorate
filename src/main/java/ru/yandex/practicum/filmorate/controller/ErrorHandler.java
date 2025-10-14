@@ -7,6 +7,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import org.springframework.dao.DataIntegrityViolationException;
+import ru.yandex.practicum.filmorate.exception.review.ReviewNotFoundException;
+
 import java.util.Map;
 import java.util.NoSuchElementException;
 
@@ -33,6 +35,12 @@ public class ErrorHandler {
     @ExceptionHandler
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public Map<String, String> handleNotFoundException(final NoSuchElementException e) {
+        return Map.of("error", "Объект не найден", "message", e.getMessage());
+    }
+
+    @ExceptionHandler(ReviewNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public Map<String, String> handleReviewNotFound(ReviewNotFoundException e) {
         return Map.of("error", "Объект не найден", "message", e.getMessage());
     }
 
