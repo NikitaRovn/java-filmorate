@@ -3,6 +3,8 @@ package ru.yandex.practicum.filmorate.storage.film;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
@@ -10,10 +12,16 @@ import ru.yandex.practicum.filmorate.model.AgeRating;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
 
-import java.sql.*;
+import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -21,18 +29,19 @@ import java.util.Set;
 @Qualifier("filmDbStorage")
 public class FilmDbStorage implements FilmStorage {
 
-    private final JdbcTemplate jdbcTemplate;
-
     public static final String FIND_BY_IDS_QUERY = """
             SELECT f.*, r.code as rating_code
             FROM films f
             LEFT JOIN ratings r ON f.rating_id = r.rating_id
             WHERE f.film_id IN (%s)
             """;
+    private final JdbcTemplate jdbcTemplate;
+    private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
     @Autowired
     public FilmDbStorage(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
+        this.namedParameterJdbcTemplate = new NamedParameterJdbcTemplate(jdbcTemplate);
     }
 
     @Override
@@ -90,6 +99,48 @@ public class FilmDbStorage implements FilmStorage {
         updateFilmGenres(film);
 
         return film;
+    }
+
+    @Override
+    public List<Film> findPopularFilms(int count, Integer genreId, Integer year) {
+        String sql = """
+                    SELECT f.*, r.code as rating_code, COUNT(l.user_id) as likes_count
+                    FROM films f
+                    LEFT JOIN ratings r ON f.rating_id = r.rating_id
+                    LEFT JOIN likes l ON f.film_id = l.film_id
+                    WHERE 1=1
+                """;
+
+        Map<String, Object> params = new HashMap<>();
+        List<String> conditions = new ArrayList<>();
+
+        if (genreId != null) {
+            conditions.add("EXISTS (SELECT 1 FROM film_genres fg WHERE fg.film_id = f.film_id AND fg.genre_id = :genreId)");
+            params.put("genreId", genreId);
+        }
+
+        if (year != null) {
+            conditions.add("YEAR(f.release_date) = :year");
+            params.put("year", year);
+        }
+
+        if (!conditions.isEmpty()) {
+            sql += " AND " + String.join(" AND ", conditions);
+        }
+
+        sql += """
+                    GROUP BY f.film_id, r.code
+                    ORDER BY likes_count DESC, f.film_id
+                    LIMIT :count
+                """;
+        params.put("count", count);
+
+        MapSqlParameterSource paramSource = new MapSqlParameterSource(params);
+
+        List<Film> films = namedParameterJdbcTemplate.query(sql, paramSource, this::mapRowToFilm);
+        films.forEach(this::loadFilmGenres);
+
+        return films;
     }
 
     @Override
