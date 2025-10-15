@@ -3,6 +3,7 @@ package ru.yandex.practicum.filmorate.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import ru.yandex.practicum.filmorate.model.Event;
 import ru.yandex.practicum.filmorate.model.FriendshipStatus;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.friendship.FriendshipStorage;
@@ -15,11 +16,14 @@ import java.util.stream.Collectors;
 public class UserService {
     private final UserStorage userStorage;
     private final FriendshipStorage friendshipStorage;
+    private final EventService eventService;
 
     @Autowired
-    public UserService(UserStorage userStorage, FriendshipStorage friendshipStorage) {
+    public UserService(UserStorage userStorage, FriendshipStorage friendshipStorage,
+                       EventService eventService) {
         this.userStorage = userStorage;
         this.friendshipStorage = friendshipStorage;
+        this.eventService = eventService;
     }
 
     public void addFriend(Integer userId, Integer friendId) {
@@ -27,7 +31,9 @@ public class UserService {
         validateUserExists(friendId);
 
         friendshipStorage.addFriend(userId, friendId, FriendshipStatus.PENDING);
-        log.info("Пользователь {} отправил запрос на дружбу пользователю {}", userId, friendId);
+        eventService.addFriendEvent(userId, friendId, Event.Operation.ADD);
+        log.info("Создано событие FRIEND: пользователь {} добавил в друзья пользователя {} (operation: ADD, entityId: {})",
+                userId, friendId, friendId);
     }
 
     public void confirmFriend(Integer userId, Integer friendId) {
@@ -35,7 +41,9 @@ public class UserService {
         validateUserExists(friendId);
 
         friendshipStorage.updateFriendshipStatus(friendId, userId, FriendshipStatus.CONFIRMED);
-        log.info("Пользователь {} подтвердил дружбу с пользователем {}", userId, friendId);
+        eventService.addFriendEvent(userId, friendId, Event.Operation.ADD);
+        log.info("Создано событие FRIEND: пользователь {} подтвердил дружбу с пользователем {} (operation: ADD, entityId: {})",
+                userId, friendId, friendId);
     }
 
     public void rejectFriend(Integer userId, Integer friendId) {
@@ -43,7 +51,9 @@ public class UserService {
         validateUserExists(friendId);
 
         friendshipStorage.removeFriend(friendId, userId);
-        log.info("Пользователь {} отклонил запрос на дружбу от пользователя {}", userId, friendId);
+        eventService.addFriendEvent(userId, friendId, Event.Operation.REMOVE);
+        log.info("Создано событие FRIEND: пользователь {} отклонил заявку от пользователя {} (operation: REMOVE, entityId: {})",
+                userId, friendId, friendId);
     }
 
     public void removeFriend(Integer userId, Integer friendId) {
@@ -51,7 +61,9 @@ public class UserService {
         validateUserExists(friendId);
 
         friendshipStorage.removeFriend(userId, friendId);
-        log.info("Пользователь {} удалил пользователя {} из друзей", userId, friendId);
+        eventService.addFriendEvent(userId, friendId, Event.Operation.REMOVE);
+        log.info("Создано событие FRIEND: пользователь {} удалил из друзей пользователя {} (operation: REMOVE, entityId: {})",
+                userId, friendId, friendId);
     }
 
     public List<User> getFriends(Integer userId) {
@@ -103,7 +115,7 @@ public class UserService {
         return friendshipStorage.getFriendshipStatus(userId, friendId);
     }
 
-    private void validateUserExists(Integer userId) {
+    public void validateUserExists(Integer userId) {
         if (!userStorage.existsById(userId)) {
             throw new NoSuchElementException("Пользователь с id " + userId + " не найден");
         }
