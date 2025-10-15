@@ -12,16 +12,13 @@ import ru.yandex.practicum.filmorate.model.AgeRating;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
 
-import java.sql.Date;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
+import java.sql.*;
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 @Qualifier("filmDbStorage")
@@ -29,6 +26,13 @@ public class FilmDbStorage implements FilmStorage {
 
     private final JdbcTemplate jdbcTemplate;
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+
+    public static final String FIND_BY_IDS_QUERY = """
+            SELECT f.*, r.code as rating_code
+            FROM films f
+            LEFT JOIN ratings r ON f.rating_id = r.rating_id
+            WHERE f.film_id IN (%s)
+            """;
 
     @Autowired
     public FilmDbStorage(JdbcTemplate jdbcTemplate) {
@@ -40,6 +44,16 @@ public class FilmDbStorage implements FilmStorage {
     public Collection<Film> findAll() {
         String sql = "SELECT f.*, r.code as rating_code FROM films f LEFT JOIN ratings r ON f.rating_id = r.rating_id";
         List<Film> films = jdbcTemplate.query(sql, this::mapRowToFilm);
+        films.forEach(this::loadFilmGenres);
+        return films;
+    }
+
+    @Override
+    public List<Film> findFilmsByIds(Set<Integer> filmIds) {
+        if (filmIds.isEmpty()) return List.of();
+        String placeholders = String.join(",", Collections.nCopies(filmIds.size(), "?"));
+        String query = String.format(FIND_BY_IDS_QUERY, placeholders);
+        List<Film> films = jdbcTemplate.query(query, this::mapRowToFilm, filmIds.toArray());
         films.forEach(this::loadFilmGenres);
         return films;
     }

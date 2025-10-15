@@ -93,4 +93,13 @@ public class FilmService {
         if (film == null) throw new NoSuchElementException("Фильм с id " + id + " не найден");
         filmStorage.deleteFilmById(id);
     }
+
+    public List<Film> getMutualFilmOfTwoUser(Long userId, Long friendId) {
+        Set<Integer> userLikedFilms = likeStorage.getLikedFilmIds(userId.intValue());
+        Set<Integer> otherUserLikedFilms = likeStorage.getLikedFilmIds(friendId.intValue());
+        Set<Integer> intersection = new HashSet<>(userLikedFilms);
+        intersection.retainAll(otherUserLikedFilms);
+
+        return filmStorage.findFilmsByIds(intersection);
+    }
 }
