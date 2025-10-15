@@ -81,6 +81,11 @@ public class FilmController {
         return filmService.getPopularFilms(count);
     }
 
+    @GetMapping("/common")
+    public List<Film> getMutualFilmOfTwoUser(@RequestParam Long userId, @RequestParam Long friendId) {
+        return filmService.getMutualFilmOfTwoUser(userId, friendId);
+    }
+
     private void validateFilmReleaseDate(Film film) {
         if (film.getReleaseDate().isBefore(CINEMA_BIRTHDAY)) {
             log.warn("Попытка добавить фильм с некорректной датой релиза: {}", film.getReleaseDate());
