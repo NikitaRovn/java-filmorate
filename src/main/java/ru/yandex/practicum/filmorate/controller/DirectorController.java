@@ -44,7 +44,7 @@ public class DirectorController {
 
     @PutMapping
     public Director update(@Valid @RequestBody Director director) {
-        Director checkDirector = directorStorage.getDirectorById(director.getId())
+        directorStorage.getDirectorById(director.getId())
                 .orElseThrow(() -> new NoSuchElementException("Режиссёр с id=" + director.getId() + " не найден"));
         Director updatedDirector = directorStorage.updateDirector(director);
         log.info("Обновлен режиссёр: {}", updatedDirector);
