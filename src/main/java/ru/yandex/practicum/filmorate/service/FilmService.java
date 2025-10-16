@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -35,7 +34,11 @@ public class FilmService {
     private final DirectorStorage directorStorage;
 
     @Autowired
-    public FilmService(FilmStorage filmStorage, UserStorage userStorage, LikeStorage likeStorage, EventService eventService, DirectorStorage directorStorage) {
+    public FilmService(FilmStorage filmStorage,
+                       UserStorage userStorage,
+                       LikeStorage likeStorage,
+                       EventService eventService,
+                       DirectorStorage directorStorage) {
         this.filmStorage = filmStorage;
         this.userStorage = userStorage;
         this.likeStorage = likeStorage;
@@ -54,7 +57,10 @@ public class FilmService {
 
         likeStorage.addLike(filmId, userId);
         eventService.addLikeEvent(userId, filmId, Event.Operation.ADD);
-        log.info("Создано событие LIKE: пользователь {} добавил лайк фильму {} (operation: ADD, entityId: {})", userId, filmId, filmId);
+        log.info("Создано событие LIKE: пользователь {} добавил лайк фильму {} (operation: ADD, entityId: {})",
+                userId,
+                filmId,
+                filmId);
     }
 
     public void removeLike(Integer filmId, Integer userId) {
@@ -63,11 +69,18 @@ public class FilmService {
 
         likeStorage.removeLike(filmId, userId);
         eventService.addLikeEvent(userId, filmId, Event.Operation.REMOVE);
-        log.info("Создано событие LIKE: пользователь {} удалил лайк фильму {} (operation: REMOVE, entityId: {})", userId, filmId, filmId);
+        log.info("Создано событие LIKE: пользователь {} удалил лайк фильму {} (operation: REMOVE, entityId: {})",
+                userId,
+                filmId,
+                filmId);
     }
 
     public List<Film> getPopularFilms(int count) {
-        return filmStorage.findAll().stream().sorted((f1, f2) -> Integer.compare(likeStorage.getLikesCount(f2.getId()), likeStorage.getLikesCount(f1.getId()))).limit(count).collect(Collectors.toList());
+        return filmStorage.findAll().stream()
+                .sorted((f1, f2) ->
+                        Integer.compare(likeStorage.getLikesCount(f2.getId()), likeStorage.getLikesCount(f1.getId())))
+                .limit(count)
+                .toList();
     }
 
     public List<Film> getPopularFilms(int count, Integer genreId, Integer year) {
@@ -92,16 +105,24 @@ public class FilmService {
     }
 
     public List<Film> directorFilmsSortedByYear(Integer directorId) {
-        return getFilmsByDirector(directorId).stream().sorted(Comparator.comparingInt(f -> f.getReleaseDate().getYear())).toList();
+        return getFilmsByDirector(directorId).stream()
+                .sorted(Comparator.comparingInt(f -> f.getReleaseDate().getYear()))
+                .toList();
     }
 
     public List<Film> directorFilmsSortedByLikes(Integer directorId) {
-        return getFilmsByDirector(directorId).stream().sorted((f1, f2) -> Integer.compare(likeStorage.getLikesCount(f2.getId()), likeStorage.getLikesCount(f1.getId()))).toList();
+        return getFilmsByDirector(directorId).stream()
+                .sorted((f1, f2) ->
+                        Integer.compare(likeStorage.getLikesCount(f2.getId()), likeStorage.getLikesCount(f1.getId())))
+                .toList();
     }
 
     public List<Film> getFilmsByDirector(Integer directorId) {
-        Director director = directorStorage.getDirectorById(directorId).orElseThrow(() -> new NoSuchElementException("Указанный режиссёр не найден"));
-        return filmStorage.findAll().stream().filter(film -> film.getDirectors().contains(director)).collect(Collectors.toList());
+        Director director = directorStorage.getDirectorById(directorId).orElseThrow(() ->
+                new NoSuchElementException("Указанный режиссёр не найден"));
+        return filmStorage.findAll().stream()
+                .filter(film -> film.getDirectors().contains(director))
+                .toList();
     }
 
     @Transactional
