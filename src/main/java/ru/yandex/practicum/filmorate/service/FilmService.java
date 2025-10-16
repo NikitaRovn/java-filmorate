@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.filmorate.model.Event;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.storage.director.DirectorStorage;
+import ru.yandex.practicum.filmorate.storage.event.EventDbStorage;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.like.LikeStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
@@ -32,35 +33,31 @@ public class FilmService {
     private final LikeStorage likeStorage;
     private final EventService eventService;
     private final DirectorStorage directorStorage;
+    private final EventDbStorage eventDbStorage;
 
     @Autowired
     public FilmService(FilmStorage filmStorage,
                        UserStorage userStorage,
                        LikeStorage likeStorage,
                        EventService eventService,
-                       DirectorStorage directorStorage) {
+                       DirectorStorage directorStorage, EventDbStorage eventDbStorage) {
         this.filmStorage = filmStorage;
         this.userStorage = userStorage;
         this.likeStorage = likeStorage;
         this.eventService = eventService;
         this.directorStorage = directorStorage;
+        this.eventDbStorage = eventDbStorage;
     }
 
     public void addLike(Integer filmId, Integer userId) {
-        validateFilmExists(filmId);
-        validateUserExists(userId);
+        boolean alreadyLiked = likeStorage.hasLike(filmId, userId);
 
-        if (likeStorage.hasLike(filmId, userId)) {
-            log.warn("Пользователь {} уже поставил лайк фильму {}", userId, filmId);
-            return;
+        if (!alreadyLiked) {
+            likeStorage.addLike(filmId, userId);
+            eventService.addLikeEvent(userId, filmId, Event.Operation.ADD);
+        } else {
+            eventService.addLikeEvent(userId, filmId, Event.Operation.ADD);
         }
-
-        likeStorage.addLike(filmId, userId);
-        eventService.addLikeEvent(userId, filmId, Event.Operation.ADD);
-        log.info("Создано событие LIKE: пользователь {} добавил лайк фильму {} (operation: ADD, entityId: {})",
-                userId,
-                filmId,
-                filmId);
     }
 
     public void removeLike(Integer filmId, Integer userId) {
