@@ -12,12 +12,20 @@ import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.like.LikeStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @Slf4j
@@ -29,8 +37,7 @@ public class FilmService {
     private final DirectorStorage directorStorage;
 
     @Autowired
-    public FilmService(FilmStorage filmStorage, UserStorage userStorage, LikeStorage likeStorage,
-                       EventService eventService, DirectorStorage directorStorage) {
+    public FilmService(FilmStorage filmStorage, UserStorage userStorage, LikeStorage likeStorage, EventService eventService, DirectorStorage directorStorage) {
         this.filmStorage = filmStorage;
         this.userStorage = userStorage;
         this.likeStorage = likeStorage;
@@ -49,8 +56,7 @@ public class FilmService {
 
         likeStorage.addLike(filmId, userId);
         eventService.addLikeEvent(userId, filmId, Event.Operation.ADD);
-        log.info("Создано событие LIKE: пользователь {} добавил лайк фильму {} (operation: ADD, entityId: {})",
-                userId, filmId, filmId);
+        log.info("Создано событие LIKE: пользователь {} добавил лайк фильму {} (operation: ADD, entityId: {})", userId, filmId, filmId);
     }
 
     public void removeLike(Integer filmId, Integer userId) {
@@ -59,18 +65,11 @@ public class FilmService {
 
         likeStorage.removeLike(filmId, userId);
         eventService.addLikeEvent(userId, filmId, Event.Operation.REMOVE);
-        log.info("Создано событие LIKE: пользователь {} удалил лайк фильму {} (operation: REMOVE, entityId: {})",
-                userId, filmId, filmId);
+        log.info("Создано событие LIKE: пользователь {} удалил лайк фильму {} (operation: REMOVE, entityId: {})", userId, filmId, filmId);
     }
 
     public List<Film> getPopularFilms(int count) {
-        return filmStorage.findAll().stream()
-                .sorted((f1, f2) -> Integer.compare(
-                        likeStorage.getLikesCount(f2.getId()),
-                        likeStorage.getLikesCount(f1.getId())
-                ))
-                .limit(count)
-                .collect(Collectors.toList());
+        return filmStorage.findAll().stream().sorted((f1, f2) -> Integer.compare(likeStorage.getLikesCount(f2.getId()), likeStorage.getLikesCount(f1.getId()))).limit(count).collect(Collectors.toList());
     }
 
     public List<Film> getPopularFilms(int count, Integer genreId, Integer year) {
@@ -95,27 +94,16 @@ public class FilmService {
     }
 
     public List<Film> directorFilmsSortedByYear(Integer directorId) {
-        return getFilmsByDirector(directorId).stream()
-                .sorted(Comparator.comparingInt(f -> f.getReleaseDate().getYear()))
-                .toList();
+        return getFilmsByDirector(directorId).stream().sorted(Comparator.comparingInt(f -> f.getReleaseDate().getYear())).toList();
     }
 
     public List<Film> directorFilmsSortedByLikes(Integer directorId) {
-        return getFilmsByDirector(directorId).stream()
-                .sorted((f1, f2) -> Integer.compare(
-                        likeStorage.getLikesCount(f2.getId()),
-                        likeStorage.getLikesCount(f1.getId())
-                ))
-                .toList();
+        return getFilmsByDirector(directorId).stream().sorted((f1, f2) -> Integer.compare(likeStorage.getLikesCount(f2.getId()), likeStorage.getLikesCount(f1.getId()))).toList();
     }
 
     public List<Film> getFilmsByDirector(Integer directorId) {
-        Director director = directorStorage.getDirectorById(directorId)
-                .orElseThrow(() -> new NoSuchElementException("Указанный режиссёр не найден"));
-        return filmStorage.findAll()
-                .stream()
-                .filter(film -> film.getDirectors().contains(director))
-                .collect(Collectors.toList());
+        Director director = directorStorage.getDirectorById(directorId).orElseThrow(() -> new NoSuchElementException("Указанный режиссёр не найден"));
+        return filmStorage.findAll().stream().filter(film -> film.getDirectors().contains(director)).collect(Collectors.toList());
     }
 
     @Transactional
@@ -132,5 +120,51 @@ public class FilmService {
         intersection.retainAll(otherUserLikedFilms);
 
         return filmStorage.findFilmsByIds(intersection);
+    }
+
+    public List<Film> getSearch(String query, List<String> by) {
+        String q = query == null ? "" : query.toLowerCase();
+        boolean byDirector = by != null && by.contains("director");
+        boolean byTitle = by != null && by.contains("title");
+
+        Collection<Film> allFilms = filmStorage.findAll();
+
+        List<Film> byDirectors = Collections.emptyList();
+        if (byDirector) {
+            byDirectors = allFilms.stream()
+                    .filter(f -> f.getDirectors() != null)
+                    .filter(f -> f.getDirectors().stream()
+                            .map(Director::getName)
+                            .filter(Objects::nonNull)
+                            .map(String::toLowerCase)
+                            .anyMatch(name -> name.contains(q)))
+                    .toList();
+        }
+
+        List<Film> byTitles = Collections.emptyList();
+        if (byTitle) {
+            byTitles = allFilms.stream()
+                    .filter(f -> f.getName() != null)
+                    .filter(f -> f.getName().toLowerCase().contains(q))
+                    .toList();
+        }
+
+        Map<Long, Film> unique = new LinkedHashMap<>();
+        for (Film f : byDirectors) {
+            unique.putIfAbsent(Long.valueOf(f.getId()), f);
+        }
+        for (Film f : byTitles) {
+            unique.putIfAbsent(Long.valueOf(f.getId()), f);
+        }
+
+        List<Film> result = new ArrayList<>(unique.values());
+
+        result.sort(
+                Comparator.comparingInt((Film f) -> likeStorage.getLikesCount(f.getId()))
+                        .reversed()
+                        .thenComparingLong(Film::getId)
+        );
+
+        return result;
     }
 }
