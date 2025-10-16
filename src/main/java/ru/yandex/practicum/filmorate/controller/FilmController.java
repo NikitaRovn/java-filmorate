@@ -112,9 +112,9 @@ public class FilmController {
     @GetMapping("/director/{directorId}")
     public List<Film> getFilmsByDirector(@PathVariable Integer directorId, @RequestParam(value = "sortBy", required = false) String sortBy) {
         if (sortBy != null && sortBy.equals("year")) {
-            return filmService.DirectorFilmsSortedByYear(directorId);
+            return filmService.directorFilmsSortedByYear(directorId);
         } else if (sortBy != null && sortBy.equals("likes")) {
-            return filmService.DirectorFilmsSortedByLikes(directorId);
+            return filmService.directorFilmsSortedByLikes(directorId);
         } else {
             return filmService.getFilmsByDirector(directorId);
         }
