@@ -82,4 +82,15 @@ public class FilmController {
             throw new ValidationException("Дата релиза не может быть раньше 28 декабря 1895 года");
         }
     }
+
+    @GetMapping("/director/{directorId}")
+    public List<Film> getFilmsByDirector(@PathVariable Integer directorId, @RequestParam(value = "sortBy", required = false) String sortBy) {
+        if (sortBy != null && sortBy.equals("year")) {
+            return filmService.DirectorFilmsSortedByYear(directorId);
+        } else if (sortBy != null && sortBy.equals("likes")) {
+            return filmService.DirectorFilmsSortedByLikes(directorId);
+        } else {
+            return filmService.getFilmsByDirector(directorId);
+        }
+    }
 }

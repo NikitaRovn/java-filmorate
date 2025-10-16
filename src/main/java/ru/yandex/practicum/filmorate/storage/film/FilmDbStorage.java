@@ -7,8 +7,10 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.model.AgeRating;
+import ru.yandex.practicum.filmorate.model.Director;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
+
 import java.sql.*;
 import java.util.Collection;
 import java.util.List;
@@ -27,15 +29,19 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public Collection<Film> findAll() {
-        String sql = "SELECT f.*, r.code as rating_code FROM films f LEFT JOIN ratings r ON f.rating_id = r.rating_id";
+        String sql = "SELECT f.*, r.code as rating_code" +
+                " FROM films f" +
+                " LEFT JOIN ratings r ON f.rating_id = r.rating_id";
         List<Film> films = jdbcTemplate.query(sql, this::mapRowToFilm);
         films.forEach(this::loadFilmGenres);
+        films.forEach(this::loadFilmDirectors);
         return films;
     }
 
     @Override
     public Film create(Film film) {
-        String sql = "INSERT INTO films (name, description, release_date, duration, rating_id) VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO films (name, description, release_date, duration, rating_id)" +
+                     " VALUES (?, ?, ?, ?, ?)";
 
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
@@ -52,13 +58,16 @@ public class FilmDbStorage implements FilmStorage {
         film.setId(keyHolder.getKey().intValue());
 
         saveFilmGenres(film);
+        saveFilmDirectors(film);
 
         return film;
     }
 
     @Override
     public Film update(Film film) {
-        String sql = "UPDATE films SET name = ?, description = ?, release_date = ?, duration = ?, rating_id = ? WHERE film_id = ?";
+        String sql = "UPDATE films SET name = ?, description = ?, release_date = ?," +
+                     " duration = ?, rating_id = ?" +
+                     " WHERE film_id = ?";
         jdbcTemplate.update(sql,
                 film.getName(),
                 film.getDescription(),
@@ -68,13 +77,17 @@ public class FilmDbStorage implements FilmStorage {
                 film.getId());
 
         updateFilmGenres(film);
+        updateFilmDirectors(film);
 
         return film;
     }
 
     @Override
     public Optional<Film> findById(Integer id) {
-        String sql = "SELECT f.*, r.code as rating_code FROM films f LEFT JOIN ratings r ON f.rating_id = r.rating_id WHERE film_id = ?";
+        String sql = "SELECT f.*, r.code as rating_code" +
+                " FROM films f" +
+                " LEFT JOIN ratings r ON f.rating_id = r.rating_id" +
+                " WHERE film_id = ?";
         List<Film> films = jdbcTemplate.query(sql, this::mapRowToFilm, id);
 
         if (films.isEmpty()) {
@@ -83,6 +96,7 @@ public class FilmDbStorage implements FilmStorage {
 
         Film film = films.get(0);
         loadFilmGenres(film);
+        loadFilmDirectors(film);
 
         return Optional.of(film);
     }
@@ -140,5 +154,37 @@ public class FilmDbStorage implements FilmStorage {
 
         film.getGenres().clear();
         film.getGenres().addAll(genres);
+    }
+
+    private void saveFilmDirectors(Film film) {
+        String deleteSql = "DELETE FROM film_directors WHERE film_id = ?";
+        jdbcTemplate.update(deleteSql, film.getId());
+
+        if (film.getDirectors() != null && !film.getDirectors().isEmpty()) {
+            String insertSql = "INSERT INTO film_directors (film_id, director_id) VALUES (?, ?)";
+            for (Director director : film.getDirectors()) {
+                jdbcTemplate.update(insertSql, film.getId(), director.getId());
+            }
+        }
+    }
+
+    private void updateFilmDirectors(Film film) {
+        saveFilmDirectors(film);
+    }
+
+    private void loadFilmDirectors(Film film) {
+        String sql = "SELECT d.director_id, d.director_name" +
+                " FROM film_directors fd" +
+                " JOIN directors d ON fd.director_id = d.director_id " +
+                " WHERE fd.film_id = ?";
+
+        List<Director> directors = jdbcTemplate.query(sql, (rs, rowNum) -> {
+            Integer directorId = rs.getInt("director_id");
+            String directorName = rs.getString("director_name");
+            return new Director(directorId, directorName);
+        }, film.getId());
+
+        film.getDirectors().clear();
+        film.getDirectors().addAll(directors);
     }
 }

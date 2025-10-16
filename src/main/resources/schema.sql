@@ -21,6 +21,19 @@ CREATE TABLE IF NOT EXISTS films (
     FOREIGN KEY (rating_id) REFERENCES ratings(rating_id)
 );
 
+CREATE TABLE IF NOT EXISTS directors (
+    director_id INT PRIMARY KEY AUTO_INCREMENT,
+    director_name VARCHAR(60) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS film_directors (
+    film_id INT,
+    director_id INT,
+    PRIMARY KEY (film_id, director_id),
+    FOREIGN KEY (film_id) REFERENCES films(film_id),
+    FOREIGN KEY (director_id) REFERENCES directors(director_id)
+);
+
 CREATE TABLE IF NOT EXISTS genres (
     genre_id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(255) NOT NULL

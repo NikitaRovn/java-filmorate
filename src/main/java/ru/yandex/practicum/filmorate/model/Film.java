@@ -17,7 +17,7 @@ public class Film {
     private String description;
 
     @NotNull(message = "Дата релиза обязательна")
-    @PastOrPresent(message = "Дата релиза не может быть в будущем")
+//    @PastOrPresent(message = "Дата релиза не может быть в будущем")  // вообще, может :)
     private LocalDate releaseDate;
 
     @NotNull(message = "Продолжительность обязательна")
@@ -29,6 +29,10 @@ public class Film {
     private Set<Genre> genres = new HashSet<>();
     private Integer mpaId;
     private Set<Integer> genreIds = new HashSet<>();
+
+    // режиссёры
+    private Set<Director> directors = new HashSet<>();
+    private Set<Integer> directorIds = new HashSet<>();
 
     public void addGenre(Genre genre) {
         genres.add(genre);
