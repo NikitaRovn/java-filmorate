@@ -24,6 +24,7 @@ public class FilmService {
     private final FilmStorage filmStorage;
     private final UserStorage userStorage;
     private final LikeStorage likeStorage;
+    private final EventService eventService;
     private final DirectorStorage directorStorage;
 
     @Autowired
