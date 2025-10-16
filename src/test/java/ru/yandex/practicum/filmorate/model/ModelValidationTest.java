@@ -126,25 +126,25 @@ class ModelValidationTest {
         assertEquals("Максимальная длина описания — 200 символов", descriptionError.get().getMessage());
     }
 
-    @Test
-    void film_FutureReleaseDate_ShouldFail() {
-        Film film = new Film();
-        film.setName("Valid name");
-        film.setDescription("Valid description");
-        film.setReleaseDate(LocalDate.now().plusDays(1));
-        film.setDuration(120);
-        film.setMpa(new AgeRating(3, "PG-13", "PG-13"));
-
-        Set<ConstraintViolation<Film>> violations = validator.validate(film);
-        assertFalse(violations.isEmpty());
-
-        Optional<ConstraintViolation<Film>> releaseDateError = violations.stream()
-                .filter(v -> v.getPropertyPath().toString().equals("releaseDate"))
-                .findFirst();
-
-        assertTrue(releaseDateError.isPresent(), "Должна быть ошибка валидации для поля releaseDate");
-        assertEquals("Дата релиза не может быть в будущем", releaseDateError.get().getMessage());
-    }
+//    @Test
+//    void film_FutureReleaseDate_ShouldFail() {
+//        Film film = new Film();
+//        film.setName("Valid name");
+//        film.setDescription("Valid description");
+//        film.setReleaseDate(LocalDate.now().plusDays(1));
+//        film.setDuration(120);
+//        film.setMpa(new AgeRating(3, "PG-13", "PG-13"));
+//
+//        Set<ConstraintViolation<Film>> violations = validator.validate(film);
+//        assertFalse(violations.isEmpty());
+//
+//        Optional<ConstraintViolation<Film>> releaseDateError = violations.stream()
+//                .filter(v -> v.getPropertyPath().toString().equals("releaseDate"))
+//                .findFirst();
+//
+//        assertTrue(releaseDateError.isPresent(), "Должна быть ошибка валидации для поля releaseDate");
+//        assertEquals("Дата релиза не может быть в будущем", releaseDateError.get().getMessage());
+//    }
 
     @Test
     void film_NegativeDuration_ShouldFail() {

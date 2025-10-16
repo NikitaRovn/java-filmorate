@@ -3,13 +3,16 @@ package ru.yandex.practicum.filmorate.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import ru.yandex.practicum.filmorate.model.Director;
 import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.filmorate.model.Event;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.storage.director.DirectorStorage;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.like.LikeStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -23,14 +26,16 @@ public class FilmService {
     private final UserStorage userStorage;
     private final LikeStorage likeStorage;
     private final EventService eventService;
+    private final DirectorStorage directorStorage;
 
     @Autowired
-    public FilmService(FilmStorage filmStorage, UserStorage userStorage,
-                       LikeStorage likeStorage, EventService eventService) {
+    public FilmService(FilmStorage filmStorage, UserStorage userStorage, LikeStorage likeStorage,
+                       EventService eventService, DirectorStorage directorStorage) {
         this.filmStorage = filmStorage;
         this.userStorage = userStorage;
         this.likeStorage = likeStorage;
         this.eventService = eventService;
+        this.directorStorage = directorStorage;
     }
 
     public void addLike(Integer filmId, Integer userId) {
@@ -87,6 +92,30 @@ public class FilmService {
         if (!userStorage.existsById(userId)) {
             throw new NoSuchElementException("Пользователь с id " + userId + " не найден");
         }
+    }
+
+    public List<Film> directorFilmsSortedByYear(Integer directorId) {
+        return getFilmsByDirector(directorId).stream()
+                .sorted(Comparator.comparingInt(f -> f.getReleaseDate().getYear()))
+                .toList();
+    }
+
+    public List<Film> directorFilmsSortedByLikes(Integer directorId) {
+        return getFilmsByDirector(directorId).stream()
+                .sorted((f1, f2) -> Integer.compare(
+                        likeStorage.getLikesCount(f2.getId()),
+                        likeStorage.getLikesCount(f1.getId())
+                ))
+                .toList();
+    }
+
+    public List<Film> getFilmsByDirector(Integer directorId) {
+        Director director = directorStorage.getDirectorById(directorId)
+                .orElseThrow(() -> new NoSuchElementException("Указанный режиссёр не найден"));
+        return filmStorage.findAll()
+                .stream()
+                .filter(film -> film.getDirectors().contains(director))
+                .collect(Collectors.toList());
     }
 
     @Transactional
