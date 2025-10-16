@@ -115,6 +115,8 @@ public class FilmService {
                 .stream()
                 .filter(film -> film.getDirectors().contains(director))
                 .collect(Collectors.toList());
+    }
+    
     @Transactional
     public void deleteFilm(Long id) {
         Film film = filmStorage.findById(id.intValue()).orElse(null);
