@@ -93,13 +93,13 @@ public class FilmService {
         }
     }
 
-    public List<Film> DirectorFilmsSortedByYear(Integer directorId) {
+    public List<Film> directorFilmsSortedByYear(Integer directorId) {
         return getFilmsByDirector(directorId).stream()
                 .sorted(Comparator.comparingInt(f -> f.getReleaseDate().getYear()))
                 .toList();
     }
 
-    public List<Film> DirectorFilmsSortedByLikes(Integer directorId) {
+    public List<Film> directorFilmsSortedByLikes(Integer directorId) {
         return getFilmsByDirector(directorId).stream()
                 .sorted((f1, f2) -> Integer.compare(
                         likeStorage.getLikesCount(f2.getId()),
@@ -116,7 +116,7 @@ public class FilmService {
                 .filter(film -> film.getDirectors().contains(director))
                 .collect(Collectors.toList());
     }
-    
+
     @Transactional
     public void deleteFilm(Long id) {
         Film film = filmStorage.findById(id.intValue()).orElse(null);
