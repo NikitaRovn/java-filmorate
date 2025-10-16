@@ -63,6 +63,7 @@ public class FilmDbStorage implements FilmStorage {
         String query = String.format(FIND_BY_IDS_QUERY, placeholders);
         List<Film> films = jdbcTemplate.query(query, this::mapRowToFilm, filmIds.toArray());
         films.forEach(this::loadFilmGenres);
+        films.forEach(this::loadFilmDirectors);
         return films;
     }
 
@@ -148,6 +149,7 @@ public class FilmDbStorage implements FilmStorage {
 
         List<Film> films = namedParameterJdbcTemplate.query(sql, paramSource, this::mapRowToFilm);
         films.forEach(this::loadFilmGenres);
+        films.forEach(this::loadFilmDirectors);
 
         return films;
     }
