@@ -33,20 +33,18 @@ public class FilmService {
     private final LikeStorage likeStorage;
     private final EventService eventService;
     private final DirectorStorage directorStorage;
-    private final EventDbStorage eventDbStorage;
 
     @Autowired
     public FilmService(FilmStorage filmStorage,
                        UserStorage userStorage,
                        LikeStorage likeStorage,
                        EventService eventService,
-                       DirectorStorage directorStorage, EventDbStorage eventDbStorage) {
+                       DirectorStorage directorStorage) {
         this.filmStorage = filmStorage;
         this.userStorage = userStorage;
         this.likeStorage = likeStorage;
         this.eventService = eventService;
         this.directorStorage = directorStorage;
-        this.eventDbStorage = eventDbStorage;
     }
 
     public void addLike(Integer filmId, Integer userId) {
@@ -124,8 +122,11 @@ public class FilmService {
 
     @Transactional
     public void deleteFilm(Long id) {
-        Film film = filmStorage.findById(id.intValue()).orElse(null);
-        if (film == null) throw new NoSuchElementException("Фильм с id " + id + " не найден");
+        Film film = filmStorage.findById(id.intValue())
+                .orElse(null);
+        if (film == null) {
+            throw new NoSuchElementException("Фильм с id " + id + " не найден");
+        }
         filmStorage.deleteFilmById(id);
     }
 
