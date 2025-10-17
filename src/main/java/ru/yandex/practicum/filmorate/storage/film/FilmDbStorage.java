@@ -38,7 +38,7 @@ public class FilmDbStorage implements FilmStorage {
             """;
     private final JdbcTemplate jdbcTemplate;
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
-    private final Set<String> ALLOWED_FIELDS = Set.of(
+    private static final Set<String> ALLOWED_FIELDS = Set.of(
             "title",
             "director",
             "description"
