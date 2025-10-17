@@ -2,9 +2,15 @@ package ru.yandex.practicum.filmorate.controller;
 
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import ru.yandex.practicum.filmorate.model.Director;
-import ru.yandex.practicum.filmorate.service.DirectorService;
 import ru.yandex.practicum.filmorate.storage.director.DirectorStorage;
 
 import java.util.List;
@@ -15,11 +21,9 @@ import java.util.NoSuchElementException;
 @Slf4j
 public class DirectorController {
     private final DirectorStorage directorStorage;
-    private final DirectorService directorService;
 
-    public DirectorController(DirectorStorage directorStorage, DirectorService directorService) {
+    public DirectorController(DirectorStorage directorStorage) {
         this.directorStorage = directorStorage;
-        this.directorService = directorService;
     }
 
     @GetMapping
