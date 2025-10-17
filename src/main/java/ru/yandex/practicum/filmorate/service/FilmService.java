@@ -13,7 +13,6 @@ import ru.yandex.practicum.filmorate.storage.like.LikeStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -21,7 +20,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Objects;
 import java.util.Set;
 
 @Service
@@ -47,6 +45,9 @@ public class FilmService {
     }
 
     public void addLike(Integer filmId, Integer userId) {
+        validateFilmExists(filmId);
+        validateUserExists(userId);
+
         boolean alreadyLiked = likeStorage.hasLike(filmId, userId);
 
         if (!alreadyLiked) {
@@ -139,48 +140,24 @@ public class FilmService {
     }
 
     public List<Film> getSearch(String query, List<String> by) {
-        String q = query == null ? "" : query.toLowerCase();
-        boolean byDirector = by != null && by.contains("director");
-        boolean byTitle = by != null && by.contains("title");
-
-        Collection<Film> allFilms = filmStorage.findAll();
-
-        List<Film> byDirectors = Collections.emptyList();
-        if (byDirector) {
-            byDirectors = allFilms.stream()
-                    .filter(f -> f.getDirectors() != null)
-                    .filter(f -> f.getDirectors().stream()
-                            .map(Director::getName)
-                            .filter(Objects::nonNull)
-                            .map(String::toLowerCase)
-                            .anyMatch(name -> name.contains(q)))
-                    .toList();
+        if (by == null || by.isEmpty()) {
+            return Collections.emptyList();
         }
 
-        List<Film> byTitles = Collections.emptyList();
-        if (byTitle) {
-            byTitles = allFilms.stream()
-                    .filter(f -> f.getName() != null)
-                    .filter(f -> f.getName().toLowerCase().contains(q))
-                    .toList();
-        }
-
-        Map<Long, Film> unique = new LinkedHashMap<>();
-        for (Film f : byDirectors) {
-            unique.putIfAbsent(Long.valueOf(f.getId()), f);
-        }
-        for (Film f : byTitles) {
-            unique.putIfAbsent(Long.valueOf(f.getId()), f);
+        Map<Integer, Film> unique = new LinkedHashMap<>();
+        for (String field : by) {
+            List<Film> part = filmStorage.findByContains(field, query);
+            for (Film f : part) {
+                unique.putIfAbsent(f.getId(), f);
+            }
         }
 
         List<Film> result = new ArrayList<>(unique.values());
-
         result.sort(
                 Comparator.comparingInt((Film f) -> likeStorage.getLikesCount(f.getId()))
                         .reversed()
-                        .thenComparingLong(Film::getId)
+                        .thenComparingInt(Film::getId)
         );
-
         return result;
     }
 }

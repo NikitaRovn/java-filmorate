@@ -38,6 +38,11 @@ public class FilmDbStorage implements FilmStorage {
             """;
     private final JdbcTemplate jdbcTemplate;
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+    private final Set<String> ALLOWED_FIELDS = Set.of(
+            "title",
+            "director",
+            "description"
+    );
 
     @Autowired
     public FilmDbStorage(JdbcTemplate jdbcTemplate) {
@@ -64,6 +69,52 @@ public class FilmDbStorage implements FilmStorage {
         List<Film> films = jdbcTemplate.query(query, this::mapRowToFilm, filmIds.toArray());
         films.forEach(this::loadFilmGenres);
         films.forEach(this::loadFilmDirectors);
+        return films;
+    }
+
+    @Override
+    public List<Film> findByContains(String field, String query) {
+        if (!ALLOWED_FIELDS.contains(field)) {
+            throw new IllegalArgumentException("Field is not allowed: " + field);
+        }
+        if (query == null || query.isBlank()) {
+            return List.of();
+        }
+
+        String like = "%" + query.trim()
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_") + "%";
+
+        String sql = switch (field) {
+            case "title" -> """
+            SELECT f.*, r.code AS rating_code
+            FROM films f
+            LEFT JOIN ratings r ON r.rating_id = f.rating_id
+            WHERE UPPER(f.name) LIKE UPPER(?) ESCAPE '\\'
+        """;
+            case "description" -> """
+            SELECT f.*, r.code AS rating_code
+            FROM films f
+            LEFT JOIN ratings r ON r.rating_id = f.rating_id
+            WHERE UPPER(f.description) LIKE UPPER(?) ESCAPE '\\'
+        """;
+            case "director" -> """
+            SELECT DISTINCT f.*, r.code AS rating_code
+            FROM films f
+            JOIN film_directors fd ON fd.film_id = f.film_id
+            JOIN directors d       ON d.director_id = fd.director_id
+            LEFT JOIN ratings r    ON r.rating_id = f.rating_id
+            WHERE UPPER(d.director_name) LIKE UPPER(?) ESCAPE '\\'
+        """;
+            default -> throw new IllegalStateException("Unexpected field: " + field);
+        };
+
+        List<Film> films = jdbcTemplate.query(sql, this::mapRowToFilm, like);
+
+        films.forEach(this::loadFilmGenres);
+        films.forEach(this::loadFilmDirectors);
+
         return films;
     }
 
