@@ -88,25 +88,25 @@ public class FilmDbStorage implements FilmStorage {
 
         String sql = switch (field) {
             case "title" -> """
-            SELECT f.*, r.code AS rating_code
-            FROM films f
-            LEFT JOIN ratings r ON r.rating_id = f.rating_id
-            WHERE UPPER(f.name) LIKE UPPER(?) ESCAPE '\\'
-        """;
+                        SELECT f.*, r.code AS rating_code
+                        FROM films f
+                        LEFT JOIN ratings r ON r.rating_id = f.rating_id
+                        WHERE UPPER(f.name) LIKE UPPER(?) ESCAPE '\\'
+                    """;
             case "description" -> """
-            SELECT f.*, r.code AS rating_code
-            FROM films f
-            LEFT JOIN ratings r ON r.rating_id = f.rating_id
-            WHERE UPPER(f.description) LIKE UPPER(?) ESCAPE '\\'
-        """;
+                        SELECT f.*, r.code AS rating_code
+                        FROM films f
+                        LEFT JOIN ratings r ON r.rating_id = f.rating_id
+                        WHERE UPPER(f.description) LIKE UPPER(?) ESCAPE '\\'
+                    """;
             case "director" -> """
-            SELECT DISTINCT f.*, r.code AS rating_code
-            FROM films f
-            JOIN film_directors fd ON fd.film_id = f.film_id
-            JOIN directors d       ON d.director_id = fd.director_id
-            LEFT JOIN ratings r    ON r.rating_id = f.rating_id
-            WHERE UPPER(d.director_name) LIKE UPPER(?) ESCAPE '\\'
-        """;
+                        SELECT DISTINCT f.*, r.code AS rating_code
+                        FROM films f
+                        JOIN film_directors fd ON fd.film_id = f.film_id
+                        JOIN directors d       ON d.director_id = fd.director_id
+                        LEFT JOIN ratings r    ON r.rating_id = f.rating_id
+                        WHERE UPPER(d.director_name) LIKE UPPER(?) ESCAPE '\\'
+                    """;
             default -> throw new IllegalStateException("Unexpected field: " + field);
         };
 
@@ -119,9 +119,25 @@ public class FilmDbStorage implements FilmStorage {
     }
 
     @Override
+    public List<Film> findFilmsByDirector(Integer directorId) {
+        String sql = """
+                SELECT f.*, r.code AS rating_code
+                FROM films f
+                JOIN film_directors fd ON fd.film_id = f.film_id
+                LEFT JOIN ratings r    ON r.rating_id = f.rating_id
+                WHERE fd.director_id = ?
+                ORDER BY f.film_id
+                """;
+        List<Film> films = jdbcTemplate.query(sql, this::mapRowToFilm, directorId);
+        films.forEach(this::loadFilmGenres);
+        films.forEach(this::loadFilmDirectors);
+        return films;
+    }
+
+    @Override
     public Film create(Film film) {
         String sql = "INSERT INTO films (name, description, release_date, duration, rating_id)" +
-                     " VALUES (?, ?, ?, ?, ?)";
+                " VALUES (?, ?, ?, ?, ?)";
 
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
@@ -146,8 +162,8 @@ public class FilmDbStorage implements FilmStorage {
     @Override
     public Film update(Film film) {
         String sql = "UPDATE films SET name = ?, description = ?, release_date = ?," +
-                     " duration = ?, rating_id = ?" +
-                     " WHERE film_id = ?";
+                " duration = ?, rating_id = ?" +
+                " WHERE film_id = ?";
         jdbcTemplate.update(sql,
                 film.getName(),
                 film.getDescription(),
