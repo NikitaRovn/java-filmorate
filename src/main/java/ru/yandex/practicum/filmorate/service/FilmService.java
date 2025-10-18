@@ -3,7 +3,6 @@ package ru.yandex.practicum.filmorate.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import ru.yandex.practicum.filmorate.model.Director;
 import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.filmorate.model.Event;
 import ru.yandex.practicum.filmorate.model.Film;
@@ -71,11 +70,7 @@ public class FilmService {
     }
 
     public List<Film> getPopularFilms(int count) {
-        return filmStorage.findAll().stream()
-                .sorted((f1, f2) ->
-                        Integer.compare(likeStorage.getLikesCount(f2.getId()), likeStorage.getLikesCount(f1.getId())))
-                .limit(count)
-                .toList();
+        return filmStorage.findPopularFilms(count, null, null);
     }
 
     public List<Film> getPopularFilms(int count, Integer genreId, Integer year) {
@@ -108,16 +103,15 @@ public class FilmService {
     public List<Film> directorFilmsSortedByLikes(Integer directorId) {
         return getFilmsByDirector(directorId).stream()
                 .sorted((f1, f2) ->
-                        Integer.compare(likeStorage.getLikesCount(f2.getId()), likeStorage.getLikesCount(f1.getId())))
+                        Integer.compare(likeStorage.getLikesCount(f2.getId()),
+                                likeStorage.getLikesCount(f1.getId())))
                 .toList();
     }
 
     public List<Film> getFilmsByDirector(Integer directorId) {
-        Director director = directorStorage.getDirectorById(directorId).orElseThrow(() ->
-                new NoSuchElementException("Указанный режиссёр не найден"));
-        return filmStorage.findAll().stream()
-                .filter(film -> film.getDirectors().contains(director))
-                .toList();
+        directorStorage.getDirectorById(directorId)
+                .orElseThrow(() -> new NoSuchElementException("Указанный режиссёр не найден"));
+        return filmStorage.findFilmsByDirector(directorId);
     }
 
     @Transactional

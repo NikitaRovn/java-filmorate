@@ -14,6 +14,8 @@ public interface FilmStorage {
 
     List<Film> findByContains(String field, String query);
 
+    List<Film> findFilmsByDirector(Integer directorId);
+
     Film create(Film film);
 
     Film update(Film film);
