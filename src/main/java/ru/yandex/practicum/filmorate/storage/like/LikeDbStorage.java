@@ -8,7 +8,6 @@ import java.util.Set;
 
 @Repository
 public class LikeDbStorage implements LikeStorage {
-
     private final JdbcTemplate jdbcTemplate;
 
     @Autowired
@@ -46,5 +45,11 @@ public class LikeDbStorage implements LikeStorage {
     public Set<Integer> getLikedUserIds(Integer filmId) {
         String sql = "SELECT user_id FROM likes WHERE film_id = ?";
         return new HashSet<>(jdbcTemplate.query(sql, (rs, rowNum) -> rs.getInt("user_id"), filmId));
+    }
+
+    @Override
+    public Set<Integer> getLikedFilmIds(Integer userId) {
+        String sql = "SELECT film_id FROM likes WHERE user_id = ?";
+        return new HashSet<>(jdbcTemplate.query(sql, (rs, rowNum) -> rs.getInt("film_id"), userId));
     }
 }
